@@ -1,0 +1,21 @@
+version: '2'
+
+services:
+  mg-hook:
+    image: nphung/mg-hook
+    ports:
+      - 8080
+    environment:
+      - R_ADDR=rethinkdb:28015
+      - MG_API_KEY
+    restart: unless-stopped
+    networks:
+      - web
+    labels:
+      - "traefik.port=8080"
+      - "traefik.frontend.rule=Host:mg-hook.elarvee.xyz"
+
+networks:
+  web:
+    external:
+      name: traefik_webgateway

@@ -8,5 +8,12 @@ import (
 
 func main() {
 	router := NewRouter()
-	log.Fatal(http.ListenAndServe(os.Getenv("ADDR"), router))
+	addr := os.Getenv("ADDR")
+
+	if addr == "" {
+		addr = ":8080"
+	}
+
+	log.Printf("Listening at %s", addr)
+	log.Fatal(http.ListenAndServe(addr, router))
 }
