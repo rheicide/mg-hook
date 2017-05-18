@@ -7,3 +7,16 @@ pipeline:
     tags:
       - latest
       - 1.0
+
+  deploy:
+    image: drillster/drone-rsync
+    hosts: [ "gcp-sea.elarvee.xyz" ]
+    user: nphung
+    key: ${SSH_KEY}
+    target: /opt/mg-hook
+    include: [ "docker-compose.yaml" ]
+    exclude: [ "*" ]
+    script:
+      - export MG_API_KEY=${MG_API_KEY}
+      - cd /opt/mg-hook
+      - docker-compose up -d --force-recreate
