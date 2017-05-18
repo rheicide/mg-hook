@@ -1,0 +1,9 @@
+pipeline:
+  docker:
+    image: plugins/docker
+    username: ${DOCKER_USERNAME}
+    password: ${DOCKER_PASSWORD}
+    repo: nphung/mg-hook
+    tags:
+      - latest
+      - 1.0
