@@ -13,14 +13,25 @@ import (
 
 	"os"
 
+	"reflect"
+	"time"
+
 	"github.com/gorilla/schema"
 	r "gopkg.in/gorethink/gorethink.v3"
 )
 
-var schemaDecoder *schema.Decoder
+var decoder *schema.Decoder
 
 func init() {
-	schemaDecoder = schema.NewDecoder()
+	decoder = schema.NewDecoder()
+	decoder.RegisterConverter(time.Time{}, func(value string) reflect.Value {
+		date, err := time.Parse(time.RFC1123Z, value)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		return reflect.ValueOf(date)
+	})
 }
 
 func ReceiveEmail(responseWriter http.ResponseWriter, request *http.Request) {
@@ -46,7 +57,7 @@ func ReceiveEmail(responseWriter http.ResponseWriter, request *http.Request) {
 	}
 
 	var mail Mail
-	schemaDecoder.Decode(&mail, request.PostForm)
+	decoder.Decode(&mail, request.PostForm)
 
 	_, err = r.Table("mails").Insert(mail).RunWrite(session)
 	if err != nil {
