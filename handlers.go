@@ -13,8 +13,15 @@ import (
 
 	"os"
 
+	"github.com/gorilla/schema"
 	r "gopkg.in/gorethink/gorethink.v3"
 )
+
+var schemaDecoder *schema.Decoder
+
+func init() {
+	schemaDecoder = schema.NewDecoder()
+}
 
 func ReceiveEmail(responseWriter http.ResponseWriter, request *http.Request) {
 	verified := verifyRequest(request)
@@ -25,23 +32,27 @@ func ReceiveEmail(responseWriter http.ResponseWriter, request *http.Request) {
 
 	err := request.ParseForm()
 	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
 		log.Panicln(err)
 	}
 
 	session, err := r.Connect(r.ConnectOpts{
-		Address: os.Getenv("R_ADDR"),
+		Address:  os.Getenv("R_ADDR"),
 		Database: "mailgun",
 	})
 	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		log.Panicln(err)
 	}
 
-	_, err = r.Table("mails").Insert(request.PostForm).RunWrite(session)
+	var mail Mail
+	schemaDecoder.Decode(&mail, request.PostForm)
+
+	_, err = r.Table("mails").Insert(mail).RunWrite(session)
 	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		log.Panicln(err)
 	}
-
-	responseWriter.WriteHeader(http.StatusOK)
 }
 
 func verifyRequest(request *http.Request) bool {
