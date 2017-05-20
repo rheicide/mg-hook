@@ -19,4 +19,5 @@ pipeline:
     script:
       - export MG_API_KEY=${MG_API_KEY}
       - cd /opt/mg-hook
+      - docker-compose pull
       - docker-compose up -d --force-recreate
