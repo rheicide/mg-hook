@@ -16,13 +16,33 @@ import (
 	"reflect"
 	"time"
 
+	"errors"
+
 	"github.com/gorilla/schema"
 	r "gopkg.in/gorethink/gorethink.v3"
 )
 
-var decoder *schema.Decoder
+var (
+	mgApiKey string
+	session  *r.Session
+	decoder  *schema.Decoder
+)
 
 func init() {
+	mgApiKey = os.Getenv("MG_API_KEY")
+	if mgApiKey == "" {
+		log.Fatalln("Mailgun API key is missing")
+	}
+
+	var err error
+	session, err = r.Connect(r.ConnectOpts{
+		Address:  os.Getenv("R_ADDR"),
+		Database: "mailgun",
+	})
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	decoder = schema.NewDecoder()
 	decoder.RegisterConverter(time.Time{}, func(value string) reflect.Value {
 		date, err := time.Parse(time.RFC1123Z, value)
@@ -34,48 +54,59 @@ func init() {
 	})
 }
 
-func ReceiveEmail(responseWriter http.ResponseWriter, request *http.Request) {
-	verified := verifyRequest(request)
-	if !verified {
-		responseWriter.WriteHeader(http.StatusNotAcceptable)
-		log.Panicln("Fake request!")
+type Handler func(http.ResponseWriter, *http.Request) (error, int)
+
+func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
+	err, status := h(w, r)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), status)
 	}
 
-	err := request.ParseForm()
+	defer log.Printf("%s\t%s\t%s", r.Method, r.RequestURI, time.Since(start))
+}
+
+func ReceiveEmail(_ http.ResponseWriter, request *http.Request) (error, int) {
+	err := verifyRequest(request)
 	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
-		log.Panicln(err)
+		return err, http.StatusNotAcceptable
 	}
 
-	session, err := r.Connect(r.ConnectOpts{
-		Address:  os.Getenv("R_ADDR"),
-		Database: "mailgun",
-	})
+	err = request.ParseForm()
 	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
-		log.Panicln(err)
+		return err, http.StatusBadRequest
 	}
 
 	var mail Mail
-	decoder.Decode(&mail, request.PostForm)
-
-	_, err = r.Table("mails").Insert(mail).RunWrite(session)
+	err = decoder.Decode(&mail, request.PostForm)
 	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
-		log.Panicln(err)
+		return err, http.StatusInternalServerError
 	}
+
+	_, err = r.Table("mails").Insert(&mail).RunWrite(session)
+	if err != nil {
+		return err, http.StatusInternalServerError
+	}
+
+	return nil, 0
 }
 
-func verifyRequest(request *http.Request) bool {
-	sig, err := hex.DecodeString(request.FormValue("signature"))
+func verifyRequest(r *http.Request) error {
+	sig, err := hex.DecodeString(r.PostFormValue("signature"))
 	if err != nil {
-		return false
+		return errors.New("Could not decode signature")
 	}
 
-	mac := hmac.New(sha256.New, []byte(os.Getenv("MG_API_KEY")))
-	io.WriteString(mac, request.FormValue("timestamp"))
-	io.WriteString(mac, request.FormValue("token"))
+	mac := hmac.New(sha256.New, []byte(mgApiKey))
+	io.WriteString(mac, r.PostFormValue("timestamp"))
+	io.WriteString(mac, r.PostFormValue("token"))
 	expectedSig := mac.Sum(nil)
 
-	return len(sig) == len(expectedSig) && hmac.Equal(sig, expectedSig)
+	if len(sig) == len(expectedSig) && hmac.Equal(sig, expectedSig) {
+		return nil
+	} else {
+		return errors.New("Fake request")
+	}
 }

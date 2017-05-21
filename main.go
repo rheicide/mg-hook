@@ -7,13 +7,11 @@ import (
 )
 
 func main() {
-	router := NewRouter()
 	addr := os.Getenv("ADDR")
-
 	if addr == "" {
 		addr = ":8080"
 	}
 
-	log.Printf("Listening at %s", addr)
-	log.Fatal(http.ListenAndServe(addr, router))
+	log.Printf("Starting server at %s", addr)
+	log.Fatal(http.ListenAndServe(addr, NewRouter()))
 }

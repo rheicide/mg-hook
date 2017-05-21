@@ -1,20 +1,16 @@
 package main
 
-import (
-	"net/http"
-)
-
 type Route struct {
-	Method      string
-	Pattern     string
-	HandlerFunc http.HandlerFunc
+	Methods []string
+	Path    string
+	Handler Handler
 }
 
 type Routes []Route
 
 var routes = Routes{
 	Route{
-		"POST",
+		[]string{"POST"},
 		"/",
 		ReceiveEmail,
 	},
