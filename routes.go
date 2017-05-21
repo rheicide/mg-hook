@@ -14,4 +14,9 @@ var routes = Routes{
 		"/",
 		ReceiveEmail,
 	},
+	Route{
+		[]string{"GET"},
+		"/version",
+		Version,
+	},
 }

@@ -18,14 +18,18 @@ import (
 
 	"errors"
 
+	"fmt"
+
 	"github.com/gorilla/schema"
 	r "gopkg.in/gorethink/gorethink.v3"
 )
 
 var (
-	mgApiKey string
-	session  *r.Session
-	decoder  *schema.Decoder
+	mgApiKey       string
+	session        *r.Session
+	decoder        *schema.Decoder
+	gitCommit      string
+	buildTimestamp string
 )
 
 func init() {
@@ -109,4 +113,13 @@ func verifyRequest(r *http.Request) error {
 	} else {
 		return errors.New("Fake request")
 	}
+}
+
+func Version(w http.ResponseWriter, r *http.Request) (error, int) {
+	_, err := fmt.Fprintf(w, "git-commit: %s\nbuild-timestamp: %s\n", gitCommit, buildTimestamp)
+	if err != nil {
+		return err, http.StatusInternalServerError
+	}
+
+	return nil, 0
 }
