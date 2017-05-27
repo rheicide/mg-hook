@@ -48,6 +48,7 @@ func init() {
 	}
 
 	decoder = schema.NewDecoder()
+	decoder.IgnoreUnknownKeys(true)
 	decoder.RegisterConverter(time.Time{}, func(value string) reflect.Value {
 		date, err := time.Parse(time.RFC1123Z, value)
 		if err != nil {
