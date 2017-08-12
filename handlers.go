@@ -50,7 +50,8 @@ func init() {
 	decoder = schema.NewDecoder()
 	decoder.IgnoreUnknownKeys(true)
 	decoder.RegisterConverter(time.Time{}, func(value string) reflect.Value {
-		date, err := time.Parse(time.RFC1123Z, value)
+		timeFormat := "Mon, 02 Jan 2006 15:04:05 -0700 (MST)"
+		date, err := time.Parse(timeFormat, value)
 		if err != nil {
 			log.Fatalln(err)
 		}
