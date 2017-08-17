@@ -54,7 +54,10 @@ func init() {
 		if err != nil {
 			date, err = time.Parse("Mon, 02 Jan 2006 15:04:05 -0700 (MST)", value)
 			if err != nil {
-				log.Fatalln(err)
+				date, err = time.Parse("02 Jan 2006 15:04:05 -0700", value)
+				if err != nil {
+					log.Fatalln(err)
+				}
 			}
 		}
 
