@@ -20,6 +20,7 @@ import (
 
 	"fmt"
 
+	"github.com/araddon/dateparse"
 	"github.com/gorilla/schema"
 	r "gopkg.in/gorethink/gorethink.v3"
 )
@@ -50,17 +51,20 @@ func init() {
 	decoder = schema.NewDecoder()
 	decoder.IgnoreUnknownKeys(true)
 	decoder.RegisterConverter(time.Time{}, func(value string) reflect.Value {
-		date, err := time.Parse(time.RFC1123Z, value)
+		date, err := dateparse.ParseAny(value)
 		if err != nil {
-			date, err = time.Parse("Mon, 02 Jan 2006 15:04:05 -0700 (MST)", value)
+			date, err = time.Parse(time.RFC1123Z, value)
 			if err != nil {
-				date, err = time.Parse("02 Jan 2006 15:04:05 -0700", value)
+				date, err = time.Parse("Mon, 02 Jan 2006 15:04:05 -0700 (MST)", value)
 				if err != nil {
-					date, err = time.Parse("2 Jan 2006 15:04:05 -0700", value)
+					date, err = time.Parse("02 Jan 2006 15:04:05 -0700", value)
 					if err != nil {
-						date, err = time.Parse("Mon, 2 Jan 2006 15:04:05 -0700", value)
+						date, err = time.Parse("2 Jan 2006 15:04:05 -0700", value)
 						if err != nil {
-							log.Fatalln(err)
+							date, err = time.Parse("Mon, 2 Jan 2006 15:04:05 -0700", value)
+							if err != nil {
+								log.Fatalln(err)
+							}
 						}
 					}
 				}
@@ -113,7 +117,7 @@ func ReceiveEmail(_ http.ResponseWriter, request *http.Request) (error, int) {
 func verifyRequest(r *http.Request) error {
 	sig, err := hex.DecodeString(r.PostFormValue("signature"))
 	if err != nil {
-		return errors.New("Could not decode signature")
+		return errors.New("could not decode signature")
 	}
 
 	mac := hmac.New(sha256.New, []byte(mgApiKey))
@@ -124,7 +128,7 @@ func verifyRequest(r *http.Request) error {
 	if len(sig) == len(expectedSig) && hmac.Equal(sig, expectedSig) {
 		return nil
 	} else {
-		return errors.New("Fake request")
+		return errors.New("fake request")
 	}
 }
 
