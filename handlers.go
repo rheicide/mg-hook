@@ -53,7 +53,22 @@ func init() {
 	decoder.RegisterConverter(time.Time{}, func(value string) reflect.Value {
 		date, err := dateparse.ParseAny(value)
 		if err != nil {
-			log.Fatalln(err)
+			date, err = time.Parse(time.RFC1123Z, value)
+			if err != nil {
+				date, err = time.Parse("Mon, 02 Jan 2006 15:04:05 -0700 (MST)", value)
+				if err != nil {
+					date, err = time.Parse("02 Jan 2006 15:04:05 -0700", value)
+					if err != nil {
+						date, err = time.Parse("2 Jan 2006 15:04:05 -0700", value)
+						if err != nil {
+							date, err = time.Parse("Mon, 2 Jan 2006 15:04:05 -0700", value)
+							if err != nil {
+								log.Fatalln(err)
+							}
+						}
+					}
+				}
+			}
 		}
 
 		return reflect.ValueOf(date)
