@@ -20,6 +20,7 @@ import (
 
 	"fmt"
 
+	"github.com/jinzhu/now"
 	"github.com/gorilla/schema"
 	r "gopkg.in/gorethink/gorethink.v3"
 )
@@ -47,24 +48,19 @@ func init() {
 		log.Fatalln(err)
 	}
 
+	now.TimeFormats = append(now.TimeFormats,
+		time.RFC1123Z,
+		"Mon, 02 Jan 2006 15:04:05 -0700 (MST)",
+		"Mon, 2 Jan 2006 15:04:05 -0700",
+		"02 Jan 2006 15:04:05 -0700",
+		"2 Jan 2006 15:04:05 -0700")
+
 	decoder = schema.NewDecoder()
 	decoder.IgnoreUnknownKeys(true)
 	decoder.RegisterConverter(time.Time{}, func(value string) reflect.Value {
-		date, err := time.Parse(time.RFC1123Z, value)
+		date, err := now.Parse(value)
 		if err != nil {
-			date, err = time.Parse("Mon, 02 Jan 2006 15:04:05 -0700 (MST)", value)
-			if err != nil {
-				date, err = time.Parse("02 Jan 2006 15:04:05 -0700", value)
-				if err != nil {
-					date, err = time.Parse("2 Jan 2006 15:04:05 -0700", value)
-					if err != nil {
-						date, err = time.Parse("Mon, 2 Jan 2006 15:04:05 -0700", value)
-						if err != nil {
-							log.Fatalln(err)
-						}
-					}
-				}
-			}
+			log.Fatalln(err)
 		}
 
 		return reflect.ValueOf(date)
